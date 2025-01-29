@@ -6,6 +6,7 @@ class BarcodeScanner {
         this.barcodeLocations = [];
         this.initializeElements();
         this.setupEventListeners();
+        this.initializeProgressAndLog();
     }
 
     initializeElements() {
@@ -19,6 +20,10 @@ class BarcodeScanner {
         this.selectButton = document.getElementById('selectButton');
         this.previewCanvas = document.getElementById('previewCanvas');
         this.previewContext = this.previewCanvas.getContext('2d');
+        this.progressSection = document.querySelector('.progress-section');
+        this.progressBar = document.getElementById('progressBar');
+        this.statusText = document.getElementById('statusText');
+        this.logContainer = document.getElementById('logContainer');
     }
 
     setupEventListeners() {
@@ -51,7 +56,7 @@ class BarcodeScanner {
 
     async processFiles(files) {
         if (files.length === 0) {
-            console.log('没有选择文件');
+            this.addLog('没有选择文件', 'warning');
             return;
         }
 
@@ -59,26 +64,35 @@ class BarcodeScanner {
         this.results = [];
         this.barcodeLocations = [];
         this.updateResultsDisplay();
+        
+        // 显示进度区域
+        this.progressSection.style.display = 'block';
+        this.totalSteps = files.length;
 
-        for (const file of files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
             try {
-                console.log('正在处理文件:', file.name);
+                this.addLog(`开始处理文件: ${file.name}`, 'info');
+                this.updateProgress((i / files.length) * 100, `正在处理文件 ${i + 1}/${files.length}: ${file.name}`);
+
                 const image = await this.loadImage(file);
                 this.currentImage = image;
                 this.updatePreview(image);
-                console.log('图片加载完成');
+                this.addLog('图片加载完成', 'info');
+
                 const results = await this.decodeImage(image);
                 if (results && results.length > 0) {
-                    console.log('识别到 ' + results.length + ' 个条码');
+                    this.addLog(`识别到 ${results.length} 个条码`, 'success');
                     results.forEach(result => {
                         this.addResult(result);
+                        this.addLog(`识别到条码: ${result.getText()}`, 'success');
                     });
                     this.drawBarcodeLocations();
                 } else {
-                    console.log('未能识别到条码');
+                    this.addLog('未能识别到条码', 'warning');
                 }
             } catch (error) {
-                console.error('处理图片时出错:', error);
+                this.addLog(`处理文件 ${file.name} 时出错: ${error.message}`, 'error');
                 this.resultsDiv.innerHTML += `
                     <div class="result-item error">
                         <p>处理文件 ${file.name} 时出错: ${error.message}</p>
@@ -86,6 +100,16 @@ class BarcodeScanner {
                 `;
             }
         }
+
+        // 完成处理
+        this.updateProgress(100, '处理完成');
+        this.addLog('所有文件处理完成', 'success');
+        
+        // 3秒后隐藏进度条
+        setTimeout(() => {
+            this.progressSection.style.display = 'none';
+            this.statusText.textContent = '';
+        }, 3000);
     }
 
     loadImage(file) {
@@ -109,6 +133,7 @@ class BarcodeScanner {
 
     async decodeImage(image) {
         try {
+            this.addLog('开始解码图片', 'info');
             const canvas = document.createElement('canvas');
             canvas.width = image.width;
             canvas.height = image.height;
@@ -139,12 +164,21 @@ class BarcodeScanner {
             ]);
             hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
-            // 对每种图像处理方式进行识别
+            // 在处理过程中添加进度更新
+            let processedRegions = 0;
+            const totalRegions = processings.length * processings.length;
+            
             for (const processing of processings) {
                 const processedCanvas = this.processImage(canvas, processing);
                 const regions = this.getImageRegions(processedCanvas);
                 
                 for (const region of regions) {
+                    processedRegions++;
+                    this.updateProgress(
+                        (processedRegions / totalRegions) * 100,
+                        `正在分析图片区域 ${processedRegions}/${totalRegions}`
+                    );
+                    
                     try {
                         const regionCanvas = document.createElement('canvas');
                         const regionContext = regionCanvas.getContext('2d', { willReadFrequently: true });
@@ -193,12 +227,13 @@ class BarcodeScanner {
             }
 
             if (results.length === 0) {
+                this.addLog('未能识别到任何条码', 'warning');
                 throw new Error('未能识别到任何条码');
             }
             
             return results;
         } catch (error) {
-            console.error('解码失败:', error);
+            this.addLog(`解码失败: ${error.message}`, 'error');
             throw error;
         }
     }
@@ -380,6 +415,7 @@ class BarcodeScanner {
     }
 
     exportToXML() {
+        this.addLog('开始导出XML文件', 'info');
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <barcodes>
     ${this.results.map(result => `
@@ -399,21 +435,26 @@ class BarcodeScanner {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        this.addLog('XML文件导出完成', 'success');
     }
 
     async toggleCamera() {
         if (this.video.style.display === 'none') {
             try {
+                this.addLog('正在启动摄像头', 'info');
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 this.video.srcObject = stream;
                 this.video.style.display = 'block';
                 this.startCameraBtn.textContent = '关闭摄像头';
                 this.startVideoProcessing();
+                this.addLog('摄像头启动成功', 'success');
             } catch (error) {
+                this.addLog(`摄像头访问失败: ${error.message}`, 'error');
                 console.error('无法访问摄像头:', error);
             }
         } else {
             this.stopCamera();
+            this.addLog('摄像头已关闭', 'info');
         }
     }
 
@@ -449,6 +490,36 @@ class BarcodeScanner {
         context.drawImage(this.video, 0, 0);
         const imageData = context.getImageData(0, 0, this.canvas.width, this.canvas.height);
         return this.codeReader.decode(imageData);
+    }
+
+    // 初始化进度和日志功能
+    initializeProgressAndLog() {
+        this.currentProgress = 0;
+        this.totalSteps = 0;
+        this.logs = [];
+    }
+
+    // 更新进度
+    updateProgress(progress, message) {
+        this.currentProgress = progress;
+        this.progressBar.style.width = `${progress}%`;
+        if (message) {
+            this.statusText.innerHTML = `${message} <div class="loading"></div>`;
+        }
+    }
+
+    // 添加日志
+    addLog(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry ${type}`;
+        logEntry.textContent = `[${timestamp}] ${message}`;
+        this.logContainer.insertBefore(logEntry, this.logContainer.firstChild);
+        
+        // 保持日志不超过100条
+        if (this.logContainer.children.length > 100) {
+            this.logContainer.removeChild(this.logContainer.lastChild);
+        }
     }
 }
 
