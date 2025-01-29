@@ -4,6 +4,8 @@ class BarcodeScanner {
         this.results = [];
         this.currentImage = null;
         this.barcodeLocations = [];
+        this.imageList = []; // 存储所有上传的图片
+        this.currentImageIndex = -1; // 当前显示的图片索引
         this.initializeElements();
         this.setupEventListeners();
         this.initializeProgressAndLog();
@@ -24,6 +26,17 @@ class BarcodeScanner {
         this.progressBar = document.getElementById('progressBar');
         this.statusText = document.getElementById('statusText');
         this.logContainer = document.getElementById('logContainer');
+        this.prevImageBtn = document.getElementById('prevImage');
+        this.nextImageBtn = document.getElementById('nextImage');
+        this.imageCounter = document.getElementById('imageCounter');
+        this.zoomInBtn = document.getElementById('zoomIn');
+        this.zoomOutBtn = document.getElementById('zoomOut');
+        this.resetZoomBtn = document.getElementById('resetZoom');
+        
+        // 初始化缩放相关变量
+        this.currentScale = 1;
+        this.maxScale = 3;
+        this.minScale = 0.5;
     }
 
     setupEventListeners() {
@@ -53,6 +66,51 @@ class BarcodeScanner {
             this.dropZone.style.borderColor = '#ccc';
             this.dropZone.style.background = 'white';
         });
+
+        this.prevImageBtn.addEventListener('click', () => this.showPreviousImage());
+        this.nextImageBtn.addEventListener('click', () => this.showNextImage());
+        
+        this.zoomInBtn.addEventListener('click', () => this.zoom(0.1));
+        this.zoomOutBtn.addEventListener('click', () => this.zoom(-0.1));
+        this.resetZoomBtn.addEventListener('click', () => this.resetZoom());
+        
+        this.setupDragAndZoom();
+    }
+
+    setupDragAndZoom() {
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+        const container = document.getElementById('previewContainer');
+
+        container.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+            container.style.cursor = 'grabbing';
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            this.updatePreviewTransform();
+        });
+
+        container.addEventListener('mouseup', () => {
+            isDragging = false;
+            container.style.cursor = 'grab';
+        });
+
+        container.addEventListener('mouseleave', () => {
+            isDragging = false;
+            container.style.cursor = 'grab';
+        });
+
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            this.zoom(delta);
+        });
     }
 
     async handleFileSelect(event) {
@@ -81,6 +139,8 @@ class BarcodeScanner {
         // 清除之前的结果
         this.results = [];
         this.barcodeLocations = [];
+        this.imageList = []; // 清除之前的图片列表
+        this.currentImageIndex = -1;
         this.updateResultsDisplay();
         
         // 显示进度区域
@@ -94,40 +154,36 @@ class BarcodeScanner {
                 this.updateProgress((i / files.length) * 100, `正在处理文件 ${i + 1}/${files.length}: ${file.name}`);
 
                 const image = await this.loadImage(file);
-                this.currentImage = image;
-                this.updatePreview(image);
-                this.addLog('图片加载完成', 'info');
+                // 存储图片信息
+                this.imageList.push({
+                    image: image,
+                    name: file.name,
+                    locations: [],
+                    results: []
+                });
+                
+                if (this.currentImageIndex === -1) {
+                    this.currentImageIndex = 0;
+                    this.showImage(0);
+                }
 
                 const results = await this.decodeImage(image);
                 if (results && results.length > 0) {
                     this.addLog(`识别到 ${results.length} 个条码`, 'success');
                     results.forEach(result => {
-                        this.addResult(result);
-                        this.addLog(`识别到条码: ${result.getText()}`, 'success');
+                        this.addResult(result, i);
                     });
-                    this.drawBarcodeLocations();
                 } else {
                     this.addLog('未能识别到条码', 'warning');
                 }
             } catch (error) {
                 this.addLog(`处理文件 ${file.name} 时出错: ${error.message}`, 'error');
-                this.resultsDiv.innerHTML += `
-                    <div class="result-item error">
-                        <p>处理文件 ${file.name} 时出错: ${error.message}</p>
-                    </div>
-                `;
             }
         }
 
-        // 完成处理
-        this.updateProgress(100, '处理完成');
-        this.addLog('所有文件处理完成', 'success');
-        
-        // 3秒后隐藏进度条
-        setTimeout(() => {
-            this.progressSection.style.display = 'none';
-            this.statusText.textContent = '';
-        }, 3000);
+        // 更新图片计数器
+        this.updateImageCounter();
+        this.updateNavigationButtons();
     }
 
     loadImage(file) {
@@ -354,8 +410,8 @@ class BarcodeScanner {
         this.previewContext.drawImage(image, 0, 0, this.previewCanvas.width, this.previewCanvas.height);
     }
 
-    drawBarcodeLocations() {
-        if (!this.currentImage || this.barcodeLocations.length === 0) return;
+    drawBarcodeLocations(locations) {
+        if (!this.currentImage || locations.length === 0) return;
 
         const scale = this.previewCanvas.width / this.currentImage.width;
         this.previewContext.strokeStyle = '#FF0000';
@@ -363,7 +419,7 @@ class BarcodeScanner {
         this.previewContext.font = 'bold 16px Arial';
         this.previewContext.fillStyle = '#FF0000';
 
-        this.barcodeLocations.forEach((location, index) => {
+        locations.forEach((location, index) => {
             const scaledX = location.x * scale;
             const scaledY = location.y * scale;
             const scaledWidth = location.width * scale;
@@ -389,7 +445,7 @@ class BarcodeScanner {
         });
     }
 
-    addResult(result) {
+    addResult(result, imageIndex) {
         const newResult = {
             type: result.getBarcodeFormat(),
             content: result.getText(),
@@ -402,7 +458,15 @@ class BarcodeScanner {
             }
         };
 
-        this.barcodeLocations.push(newResult.location);
+        // 将结果添加到对应图片的数据中
+        this.imageList[imageIndex].locations.push(newResult.location);
+        this.imageList[imageIndex].results.push(newResult);
+        
+        // 如果是当前显示的图片，更新显示
+        if (imageIndex === this.currentImageIndex) {
+            this.drawBarcodeLocations(this.imageList[imageIndex].locations);
+        }
+        
         console.log('添加新结果:', newResult);
         this.results.push(newResult);
         this.updateResultsDisplay();
@@ -560,6 +624,92 @@ class BarcodeScanner {
         if (this.logContainer.children.length > 100) {
             this.logContainer.removeChild(this.logContainer.lastChild);
         }
+    }
+
+    showImage(index) {
+        if (index < 0 || index >= this.imageList.length) return;
+        
+        this.currentImageIndex = index;
+        const imageData = this.imageList[index];
+        this.currentImage = imageData.image;
+        
+        // 重置缩放和位置
+        this.resetZoom();
+        
+        // 更新预览
+        this.updatePreview(imageData.image);
+        
+        // 绘制该图片的条码位置
+        this.drawBarcodeLocations(imageData.locations);
+        
+        // 更新计数器和按钮状态
+        this.updateImageCounter();
+        this.updateNavigationButtons();
+    }
+
+    showPreviousImage() {
+        if (this.currentImageIndex > 0) {
+            this.showImage(this.currentImageIndex - 1);
+        }
+    }
+
+    showNextImage() {
+        if (this.currentImageIndex < this.imageList.length - 1) {
+            this.showImage(this.currentImageIndex + 1);
+        }
+    }
+
+    updateImageCounter() {
+        if (this.imageList.length > 0) {
+            this.imageCounter.textContent = `${this.currentImageIndex + 1}/${this.imageList.length}`;
+        } else {
+            this.imageCounter.textContent = '0/0';
+        }
+    }
+
+    updateNavigationButtons() {
+        this.prevImageBtn.disabled = this.currentImageIndex <= 0;
+        this.nextImageBtn.disabled = this.currentImageIndex >= this.imageList.length - 1;
+    }
+
+    zoom(delta) {
+        const newScale = this.currentScale + delta;
+        if (newScale >= this.minScale && newScale <= this.maxScale) {
+            this.currentScale = newScale;
+            this.updatePreviewTransform();
+        }
+    }
+
+    resetZoom() {
+        this.currentScale = 1;
+        this.translateX = 0;
+        this.translateY = 0;
+        this.updatePreviewTransform();
+    }
+
+    updatePreviewTransform() {
+        const canvas = this.previewCanvas;
+        const context = this.previewContext;
+        
+        // 清除画布
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 应用变换
+        context.save();
+        context.translate(this.translateX, this.translateY);
+        context.scale(this.currentScale, this.currentScale);
+        
+        // 绘制图片
+        if (this.currentImage) {
+            context.drawImage(this.currentImage, 0, 0, canvas.width / this.currentScale, canvas.height / this.currentScale);
+        }
+        
+        // 绘制条码位置
+        if (this.imageList[this.currentImageIndex]) {
+            this.drawBarcodeLocations(this.imageList[this.currentImageIndex].locations);
+        }
+        
+        context.restore();
     }
 }
 

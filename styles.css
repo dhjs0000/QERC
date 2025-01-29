@@ -311,26 +311,36 @@ h1 {
 
 .preview-controls {
     display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.zoom-controls {
+    display: flex;
     gap: 10px;
 }
 
-.control-btn {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
+.image-counter {
+    font-size: 0.9rem;
+    color: #666;
+    min-width: 50px;
+    text-align: center;
 }
 
-.control-btn:hover {
+/* 图片切换按钮特殊样式 */
+#prevImage, #nextImage {
     background: var(--secondary-color);
-    transform: translateY(-2px);
+}
+
+#prevImage:hover, #nextImage:hover {
+    background: var(--primary-color);
+}
+
+/* 禁用状态 */
+.control-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
 }
 
 /* 结果操作按钮 */
