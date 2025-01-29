@@ -164,67 +164,53 @@ class BarcodeScanner {
             ]);
             hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
-            // 在处理过程中添加进度更新
-            let processedRegions = 0;
-            const totalRegions = processings.length * processings.length;
-            
-            for (const processing of processings) {
+            // 计算总步骤数
+            const regions = this.getImageRegions(canvas);
+            const totalSteps = processings.length * regions.length;
+            let currentStep = 0;
+
+            // 使用 Promise.all 并行处理不同的图像处理方式
+            const processingPromises = processings.map(async (processing, processingIndex) => {
                 const processedCanvas = this.processImage(canvas, processing);
-                const regions = this.getImageRegions(processedCanvas);
                 
+                // 对每个区域进行处理
                 for (const region of regions) {
-                    processedRegions++;
-                    this.updateProgress(
-                        (processedRegions / totalRegions) * 100,
-                        `正在分析图片区域 ${processedRegions}/${totalRegions}`
-                    );
+                    currentStep++;
                     
+                    // 使用 requestAnimationFrame 确保UI更新
+                    await new Promise(resolve => {
+                        requestAnimationFrame(() => {
+                            const progress = (currentStep / totalSteps) * 100;
+                            this.updateProgress(
+                                progress,
+                                `正在分析图片 ${Math.round(progress)}%`
+                            );
+                            resolve();
+                        });
+                    });
+
                     try {
-                        const regionCanvas = document.createElement('canvas');
-                        const regionContext = regionCanvas.getContext('2d', { willReadFrequently: true });
-                        regionCanvas.width = region.width;
-                        regionCanvas.height = region.height;
-                        
-                        regionContext.drawImage(processedCanvas, 
-                            region.x, region.y, region.width, region.height,
-                            0, 0, region.width, region.height
-                        );
-
-                        // 尝试两种不同的二值化方式
-                        const binarizers = [
-                            new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(regionCanvas)),
-                            new ZXing.GlobalHistogramBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(regionCanvas))
-                        ];
-
-                        for (const binarizer of binarizers) {
-                            try {
-                                const bitmap = new ZXing.BinaryBitmap(binarizer);
-                                const reader = new ZXing.MultiFormatReader();
-                                const result = reader.decode(bitmap, hints);
-                                
-                                if (result) {
-                                    // 为结果添加区域信息
-                                    result.region = region;
-                                    
-                                    // 检查是否已经存在相同的结果
-                                    const isDuplicate = results.some(r => 
-                                        r.getText() === result.getText() && 
-                                        r.getBarcodeFormat() === result.getBarcodeFormat()
-                                    );
-                                    if (!isDuplicate) {
-                                        results.push(result);
-                                        console.log('发现新条码:', result.getText(), '位置:', region);
-                                    }
-                                }
-                            } catch (e) {
-                                continue;
+                        const result = await this.processRegion(processedCanvas, region, hints);
+                        if (result) {
+                            result.region = region;
+                            const isDuplicate = results.some(r => 
+                                r.getText() === result.getText() && 
+                                r.getBarcodeFormat() === result.getBarcodeFormat()
+                            );
+                            if (!isDuplicate) {
+                                results.push(result);
+                                this.addLog(`发现新条码: ${result.getText()}`, 'success');
                             }
                         }
                     } catch (e) {
+                        // 忽略单个区域的识别错误
                         continue;
                     }
                 }
-            }
+            });
+
+            // 等待所有处理完成
+            await Promise.all(processingPromises);
 
             if (results.length === 0) {
                 this.addLog('未能识别到任何条码', 'warning');
@@ -236,6 +222,36 @@ class BarcodeScanner {
             this.addLog(`解码失败: ${error.message}`, 'error');
             throw error;
         }
+    }
+
+    // 新增：处理单个区域的方法
+    async processRegion(processedCanvas, region, hints) {
+        const regionCanvas = document.createElement('canvas');
+        const regionContext = regionCanvas.getContext('2d', { willReadFrequently: true });
+        regionCanvas.width = region.width;
+        regionCanvas.height = region.height;
+        
+        regionContext.drawImage(processedCanvas, 
+            region.x, region.y, region.width, region.height,
+            0, 0, region.width, region.height
+        );
+
+        // 尝试两种不同的二值化方式
+        const binarizers = [
+            new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(regionCanvas)),
+            new ZXing.GlobalHistogramBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(regionCanvas))
+        ];
+
+        for (const binarizer of binarizers) {
+            try {
+                const bitmap = new ZXing.BinaryBitmap(binarizer);
+                const reader = new ZXing.MultiFormatReader();
+                return await reader.decode(bitmap, hints);
+            } catch (e) {
+                continue;
+            }
+        }
+        return null;
     }
 
     // 图像处理函数
@@ -499,13 +515,19 @@ class BarcodeScanner {
         this.logs = [];
     }
 
-    // 更新进度
+    // 修改进度更新方法，添加防抖
     updateProgress(progress, message) {
-        this.currentProgress = progress;
-        this.progressBar.style.width = `${progress}%`;
-        if (message) {
-            this.statusText.innerHTML = `${message} <div class="loading"></div>`;
+        if (this._updateProgressTimeout) {
+            clearTimeout(this._updateProgressTimeout);
         }
+        
+        this._updateProgressTimeout = setTimeout(() => {
+            this.currentProgress = progress;
+            this.progressBar.style.width = `${progress}%`;
+            if (message) {
+                this.statusText.innerHTML = `${message} <div class="loading"></div>`;
+            }
+        }, 16); // 约60fps的更新频率
     }
 
     // 添加日志
