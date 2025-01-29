@@ -27,13 +27,31 @@ class BarcodeScanner {
     }
 
     setupEventListeners() {
+        this.selectButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.fileInput.click();
+        });
+
+        this.dropZone.addEventListener('click', (e) => {
+            if (e.target !== this.selectButton) {
+                this.fileInput.click();
+            }
+        });
+
         this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
         this.dropZone.addEventListener('dragover', (e) => this.handleDragOver(e));
         this.dropZone.addEventListener('drop', (e) => this.handleDrop(e));
         this.startCameraBtn.addEventListener('click', () => this.toggleCamera());
         this.exportBtn.addEventListener('click', () => this.exportToXML());
-        this.selectButton.addEventListener('click', () => {
-            this.fileInput.click();
+
+        this.dropZone.addEventListener('dragenter', () => {
+            this.dropZone.style.borderColor = 'var(--primary-color)';
+            this.dropZone.style.background = '#f8f9ff';
+        });
+
+        this.dropZone.addEventListener('dragleave', () => {
+            this.dropZone.style.borderColor = '#ccc';
+            this.dropZone.style.background = 'white';
         });
     }
 
