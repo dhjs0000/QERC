@@ -1,0 +1,131 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.upload-section {
+    margin-bottom: 30px;
+}
+
+.upload-area {
+    border: 2px dashed #ccc;
+    padding: 40px;
+    text-align: center;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+.upload-btn {
+    background: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#fileInput {
+    display: none;
+}
+
+.camera-section {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+#startCamera {
+    background: #2196F3;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.results-section {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.export-btn {
+    background: #FF5722;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+.status-message {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.result-item {
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.result-item .result-info {
+    flex: 1;
+}
+
+.result-item .highlight-btn {
+    padding: 5px 10px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.result-item.error {
+    background-color: #ffebee;
+    border-color: #ffcdd2;
+    color: #c62828;
+}
+
+.preview-section {
+    margin: 20px 0;
+    text-align: center;
+}
+
+.preview-container {
+    max-width: 100%;
+    overflow: auto;
+    margin: 0 auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f5f5f5;
+}
+
+#previewCanvas {
+    max-width: 100%;
+    height: auto;
+} 

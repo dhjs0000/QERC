@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多码识别系统</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>多码识别系统</h1>
+        
+        <div class="upload-section">
+            <div class="upload-area" id="dropZone">
+                <p>将图片拖放到此处或</p>
+                <input type="file" id="fileInput" multiple accept="image/*">
+                <button class="upload-btn" id="selectButton">选择图片</button>
+            </div>
+            <div id="status" class="status-message"></div>
+        </div>
+
+        <!-- 添加预览区域 -->
+        <div class="preview-section">
+            <div class="preview-container">
+                <canvas id="previewCanvas"></canvas>
+            </div>
+        </div>
+
+        <div class="camera-section">
+            <button id="startCamera">开启摄像头</button>
+            <video id="video" style="display: none;"></video>
+            <canvas id="canvas" style="display: none;"></canvas>
+        </div>
+
+        <div class="results-section">
+            <h2>识别结果</h2>
+            <div id="results"></div>
+            <button id="exportXML" class="export-btn">导出XML</button>
+        </div>
+    </div>
+    <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
+    <script src="app.js"></script>
+</body>
+</html> 
