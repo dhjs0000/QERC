@@ -5,52 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>多码识别系统</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- 添加字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>多码识别系统</h1>
+        <header class="header">
+            <h1>多码识别系统</h1>
+            <p class="subtitle">支持同时识别多个条形码/二维码</p>
+        </header>
         
-        <div class="upload-section">
-            <div class="upload-area" id="dropZone">
-                <p>将图片拖放到此处或</p>
-                <input type="file" id="fileInput" multiple accept="image/*">
-                <button class="upload-btn" id="selectButton">选择图片</button>
+        <main class="main-content">
+            <div class="upload-section">
+                <div class="upload-area" id="dropZone">
+                    <div class="upload-icon">
+                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5V19M12 5L6 11M12 5L18 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <p class="upload-text">将图片拖放到此处或点击上传</p>
+                    <input type="file" id="fileInput" multiple accept="image/*">
+                    <button class="upload-btn" id="selectButton">选择图片</button>
+                </div>
+                <div id="status" class="status-message"></div>
             </div>
-            <div id="status" class="status-message"></div>
-        </div>
 
-        <div class="progress-section" style="display: none;">
-            <div class="progress-info">
-                <span id="statusText">正在处理...</span>
-                <div class="progress-bar">
-                    <div class="progress-bar-fill" id="progressBar"></div>
+            <div class="progress-section" style="display: none;">
+                <div class="progress-info">
+                    <span id="statusText">正在处理...</span>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" id="progressBar"></div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 添加预览区域 -->
-        <div class="preview-section">
-            <div class="preview-container">
-                <canvas id="previewCanvas"></canvas>
+            <div class="preview-section">
+                <div class="preview-container">
+                    <canvas id="previewCanvas"></canvas>
+                </div>
             </div>
-        </div>
 
-        <div class="camera-section">
-            <button id="startCamera">开启摄像头</button>
-            <video id="video" style="display: none;"></video>
-            <canvas id="canvas" style="display: none;"></canvas>
-        </div>
+            <div class="results-container">
+                <div class="log-section">
+                    <h2>处理日志</h2>
+                    <div id="logContainer" class="log-container"></div>
+                </div>
 
-        <div class="log-section">
-            <h2>处理日志</h2>
-            <div id="logContainer" class="log-container"></div>
-        </div>
+                <div class="results-section">
+                    <div class="results-header">
+                        <h2>识别结果</h2>
+                        <button id="exportXML" class="export-btn">导出XML</button>
+                    </div>
+                    <div id="results" class="results-grid"></div>
+                </div>
+            </div>
+        </main>
 
-        <div class="results-section">
-            <h2>识别结果</h2>
-            <div id="results"></div>
-            <button id="exportXML" class="export-btn">导出XML</button>
-        </div>
+        <footer class="footer">
+            <p>© 2024 多码识别系统 - 支持批量识别条形码和二维码</p>
+        </footer>
     </div>
     <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
     <script src="app.js"></script>
