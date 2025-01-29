@@ -7,11 +7,13 @@
     <link rel="stylesheet" href="styles.css">
     <!-- 添加字体 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 添加图标库 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1>多码识别系统</h1>
+            <h1><i class="ri-barcode-box-line"></i> 多码识别系统</h1>
             <p class="subtitle">支持同时识别多个条形码/二维码</p>
         </header>
         
@@ -19,20 +21,27 @@
             <div class="upload-section">
                 <div class="upload-area" id="dropZone">
                     <div class="upload-icon">
-                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 5V19M12 5L6 11M12 5L18 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                        <i class="ri-upload-cloud-2-line"></i>
                     </div>
                     <p class="upload-text">将图片拖放到此处或点击上传</p>
                     <input type="file" id="fileInput" multiple accept="image/*">
-                    <button class="upload-btn" id="selectButton">选择图片</button>
+                    <button class="upload-btn" id="selectButton">
+                        <i class="ri-image-add-line"></i> 选择图片
+                    </button>
+                </div>
+                <div class="upload-tips">
+                    <p><i class="ri-information-line"></i> 支持格式：JPG、PNG、BMP等常见图片格式</p>
+                    <p><i class="ri-file-list-line"></i> 可同时上传多张图片进行批量识别</p>
                 </div>
                 <div id="status" class="status-message"></div>
             </div>
 
             <div class="progress-section" style="display: none;">
                 <div class="progress-info">
-                    <span id="statusText">正在处理...</span>
+                    <div class="progress-status">
+                        <span id="statusText">正在处理...</span>
+                        <div class="loading"></div>
+                    </div>
                     <div class="progress-bar">
                         <div class="progress-bar-fill" id="progressBar"></div>
                     </div>
@@ -40,21 +49,47 @@
             </div>
 
             <div class="preview-section">
-                <div class="preview-container">
+                <div class="preview-header">
+                    <h2><i class="ri-image-2-line"></i> 图片预览</h2>
+                    <div class="preview-controls">
+                        <button id="zoomIn" class="control-btn" title="放大">
+                            <i class="ri-zoom-in-line"></i>
+                        </button>
+                        <button id="zoomOut" class="control-btn" title="缩小">
+                            <i class="ri-zoom-out-line"></i>
+                        </button>
+                        <button id="resetZoom" class="control-btn" title="重置大小">
+                            <i class="ri-refresh-line"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="preview-container" id="previewContainer">
                     <canvas id="previewCanvas"></canvas>
                 </div>
             </div>
 
             <div class="results-container">
                 <div class="log-section">
-                    <h2>处理日志</h2>
+                    <div class="section-header">
+                        <h2><i class="ri-file-list-3-line"></i> 处理日志</h2>
+                        <button id="clearLog" class="clear-btn" title="清除日志">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>
+                    </div>
                     <div id="logContainer" class="log-container"></div>
                 </div>
 
                 <div class="results-section">
                     <div class="results-header">
-                        <h2>识别结果</h2>
-                        <button id="exportXML" class="export-btn">导出XML</button>
+                        <h2><i class="ri-list-check"></i> 识别结果</h2>
+                        <div class="results-actions">
+                            <button id="copyResults" class="action-btn" title="复制所有结果">
+                                <i class="ri-file-copy-line"></i> 复制
+                            </button>
+                            <button id="exportXML" class="export-btn">
+                                <i class="ri-download-2-line"></i> 导出XML
+                            </button>
+                        </div>
                     </div>
                     <div id="results" class="results-grid"></div>
                 </div>
@@ -63,7 +98,34 @@
 
         <footer class="footer">
             <p>© 2024 多码识别系统 - 支持批量识别条形码和二维码</p>
+            <div class="footer-links">
+                <a href="#" id="showHelp"><i class="ri-question-line"></i> 使用帮助</a>
+                <a href="#" id="showAbout"><i class="ri-information-line"></i> 关于</a>
+            </div>
         </footer>
+
+        <!-- 帮助对话框 -->
+        <div id="helpDialog" class="dialog">
+            <div class="dialog-content">
+                <h3><i class="ri-question-line"></i> 使用帮助</h3>
+                <div class="help-content">
+                    <h4>支持的码类型</h4>
+                    <ul>
+                        <li>一维条形码（Code128, EAN-13, UPC等）</li>
+                        <li>二维码（QR Code）</li>
+                        <li>DataMatrix码</li>
+                    </ul>
+                    <h4>使用步骤</h4>
+                    <ol>
+                        <li>选择或拖放图片到上传区域</li>
+                        <li>等待系统自动识别</li>
+                        <li>查看识别结果</li>
+                        <li>可以导出为XML或复制结果</li>
+                    </ol>
+                </div>
+                <button class="dialog-close"><i class="ri-close-line"></i></button>
+            </div>
+        </div>
     </div>
     <script src="https://unpkg.com/@zxing/library@0.19.1"></script>
     <script src="app.js"></script>
